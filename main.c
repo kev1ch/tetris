@@ -14,6 +14,8 @@ COORD shape[SHAPE_ELEMENT_COUNT];
 
 char field[FIELD_WIDTH][FIELD_HEIGHT];
 
+int score;
+
 void GoToXY(int column, int line);
 void drawBorders();
 void newShape();
@@ -26,9 +28,14 @@ void lRShape();
 int moveShapeDown();
 void moveShape(int dir);
 void rotateShape();
+void dropShape();
+int isCollision(int x, int y);
 void drawField();
 void addShapeToField();
 void readUserInput();
+void clearLine();
+void collapseLine(int line);
+int isFull(int line);
 void init();
 
 int main() {
@@ -40,6 +47,7 @@ int main() {
         readUserInput();
         if (!moveShapeDown()) {
             addShapeToField();
+            clearLine();
             newShape();
         } // end if
         Sleep(500);
@@ -175,8 +183,12 @@ void sRShape() {
 } // end sRShape
 
 void drawField() {
+    GoToXY(1, FIELD_WIDTH + 1);
+    printf("SCORE: %d", score);
     for (int i = 0; i < FIELD_HEIGHT; i++) {
         for (int j = 0; j < FIELD_WIDTH; j++) {
+            HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+            SetConsoleTextAttribute(hConsole, (j % 2 ? BACKGROUND_RED : BACKGROUND_BLUE) | BACKGROUND_INTENSITY);
             GoToXY(j + 1, i);
             if (field[j][i]) {
                 printf("&");
@@ -199,7 +211,7 @@ int moveShapeDown() {
     for (int i = 0; i < SHAPE_ELEMENT_COUNT; i++) {
         temp_shape[i].X = shape[i].X;
         temp_shape[i].Y = shape[i].Y + 1;
-        if (temp_shape[i].Y >= FIELD_HEIGHT || field[temp_shape[i].X][temp_shape[i].Y]) {
+        if (isCollision(temp_shape[i].X, temp_shape[i].Y)) {
             result = 0;
             break;
         } // end if
@@ -214,6 +226,17 @@ int moveShapeDown() {
     } // end if
     return result;
 } // end moveShape
+
+void dropShape() {
+    while (moveShapeDown());
+} // end dropShape
+
+int isCollision(int x, int y) {
+    int result = field[x][y] || y >= FIELD_HEIGHT ||
+                 x < 0 || x >= FIELD_WIDTH ||
+                 y < 0;
+    return result;
+} // end isCollision
 
 void addShapeToField() {
     for (int i = 0; i < SHAPE_ELEMENT_COUNT; i++) {
@@ -266,6 +289,9 @@ void readUserInput() {
                 } else if (virtual_key_code == VK_SPACE) {
                     printf("spacebar");
                     rotateShape();
+                } else if (virtual_key_code == VK_DOWN) {
+                    printf("down");
+                    dropShape();
                 } // end if
             } // end if
         } // end for
@@ -280,7 +306,7 @@ void moveShape(int dir) {
     for (int i = 0; i < SHAPE_ELEMENT_COUNT; i++) {
         temp_shape[i].X = shape[i].X + dir;
         temp_shape[i].Y = shape[i].Y;
-        if (temp_shape[i].X < 0 || temp_shape[i].X >= FIELD_WIDTH) {
+        if (isCollision(temp_shape[i].X, temp_shape[i].Y)) {
             goto out_label;
         } // end if
     } // end for
@@ -316,8 +342,7 @@ void rotateShape() {
         int delta_y = shape[i].Y - centre_y;
         temp_shape[i].X = centre_x - delta_y;
         temp_shape[i].Y = centre_y + delta_x;
-        if (field[temp_shape[i].X][temp_shape[i].Y] || temp_shape[i].X < 0 || temp_shape[i].X >= FIELD_WIDTH ||
-            temp_shape[i].Y < 0 || temp_shape[i].Y > FIELD_HEIGHT) {
+        if (isCollision(temp_shape[i].X, temp_shape[i].Y)) {
             goto out_label;
         } // end if
     } // end for
@@ -331,3 +356,37 @@ out_label:
     return;
 
 } // end rotateShape
+
+void clearLine() {
+
+    for (int i = 0; i < FIELD_HEIGHT; i++) {
+        if (isFull(i)) {
+            collapseLine(i);
+            score += 100;
+        } // end if
+    } // end for
+
+} // end clearLine
+
+int isFull(int line) {
+    int result = 1;
+
+    for (int i = 0; i < FIELD_WIDTH; i++) {
+        if (!field[i][line]) {
+            result = 0;
+            break;
+        } // end if
+    } // end for
+
+    return result;
+} // end isFull
+
+void collapseLine(int line) {
+
+    for (int i = line; i > 0; i--) {
+        for (int j = 0; j < FIELD_WIDTH; j++) {
+            field[j][i] = field[j][i - 1];
+        } // end for
+    } // end for
+
+} // end collapseLine
