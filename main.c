@@ -32,7 +32,7 @@ void dropShape();
 int isCollision(int x, int y);
 void drawField();
 void addShapeToField();
-void readUserInput();
+int readUserInput();
 void clearLine();
 void collapseLine(int line);
 int isFull(int line);
@@ -44,13 +44,17 @@ int main() {
 
     while (1) {
         drawField();
-        readUserInput();
+        for (int i = 0; i < 10; i++) {
+            if (readUserInput()) {
+                drawField();
+            } // end if
+            Sleep(50);
+        } // end while
         if (!moveShapeDown()) {
             addShapeToField();
             clearLine();
             newShape();
         } // end if
-        Sleep(500);
     } // end while (main game loop)
 
     GoToXY(0, 30);
@@ -80,16 +84,22 @@ void GoToXY(int column, int line) {
 } // end GoToXY
 
 void drawBorders() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, 0x11);
     for (int i = 0; i < FIELD_HEIGHT + 1; i++) {
         GoToXY(0, i);
-        printf("#");
-        GoToXY(FIELD_WIDTH + 1, i);
-        printf("#");
+        printf("%c", 186);
+        GoToXY(FIELD_WIDTH*2 + 1, i);
+        printf("%c", 186);
     } // end for
     GoToXY(1, FIELD_HEIGHT);
-    for (int i = 0; i < FIELD_WIDTH + 1; i++) {
-        printf("#");
+    for (int i = 0; i < FIELD_WIDTH*2 + 1; i++) {
+        printf("%c", 205);
     } // end for
+    GoToXY(0, FIELD_HEIGHT);
+    printf("%c", 200);
+    GoToXY(FIELD_WIDTH*2 + 1, FIELD_HEIGHT);
+    printf("%c", 188);
 } // end drawField
 
 void newShape() {
@@ -183,26 +193,29 @@ void sRShape() {
 } // end sRShape
 
 void drawField() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     GoToXY(1, FIELD_WIDTH + 1);
     printf("SCORE: %d", score);
     for (int i = 0; i < FIELD_HEIGHT; i++) {
         for (int j = 0; j < FIELD_WIDTH; j++) {
-            HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-            SetConsoleTextAttribute(hConsole, (j % 2 ? BACKGROUND_RED : BACKGROUND_BLUE) | BACKGROUND_INTENSITY);
-            GoToXY(j + 1, i);
+            GoToXY(j*2 + 1, i);
             if (field[j][i]) {
-                printf("&");
+                SetConsoleTextAttribute(hConsole, 0x99);
+                printf("{}");
             } else {
-                printf(" ");
+                SetConsoleTextAttribute(hConsole, j % 2 ? 0x70 : 0x80);
+                printf("  ");
             } // end if
         } // end for
     } // end for
+    SetConsoleTextAttribute(hConsole, 0x22);
     for (int i = 0; i < SHAPE_ELEMENT_COUNT; i++) {
-        int x = shape[i].X + 1;
+        int x = shape[i].X*2 + 1;
         int y = shape[i].Y;
         GoToXY(x, y);
-        printf("+");
+        printf("[]");
     } // end for
+    SetConsoleTextAttribute(hConsole, 0x0f);
 } // end drawField
 
 int moveShapeDown() {
@@ -260,7 +273,9 @@ void init() {
 
 } // end init
 
-void readUserInput() {
+int readUserInput() {
+
+    int result = 0;
 
     HANDLE hstdin = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD ir_in_buf[IR_BUFFER_SIZE];
@@ -279,6 +294,10 @@ void readUserInput() {
                     continue;
                 } // end if
                 WORD virtual_key_code = key_event.wVirtualKeyCode;
+                if (virtual_key_code == VK_LEFT || virtual_key_code == VK_RIGHT ||
+                    virtual_key_code == VK_SPACE || virtual_key_code == VK_DOWN) {
+                    result = 1;
+                } // end if
                 GoToXY(0, 27);
                 if (virtual_key_code == VK_LEFT) {
                     moveShape(-1);
@@ -296,6 +315,8 @@ void readUserInput() {
             } // end if
         } // end for
     } // end if
+
+    return result;
 
 } // end readUserInput
 
