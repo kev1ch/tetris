@@ -7,6 +7,7 @@ typedef int INTEGER;
 #define LOOP_COUNT 10
 #define FIELD_HEIGHT 20
 #define FIELD_WIDTH 20
+#define FIELD_SIZE (FIELD_WIDTH * 2 * FIELD_HEIGHT)
 #define SHAPE_ELEMENT_COUNT 4
 #define IR_BUFFER_SIZE 128
 
@@ -100,6 +101,9 @@ void drawBorders() {
     printf("%c", 200);
     GoToXY(FIELD_WIDTH*2 + 1, FIELD_HEIGHT);
     printf("%c", 188);
+    SetConsoleTextAttribute(hConsole, 0x0f);
+    GoToXY(FIELD_WIDTH * 2 + 5, 0);
+    printf("Copyright Daniil Pavlov, 2020");
 } // end drawField
 
 void newShape() {
@@ -193,29 +197,56 @@ void sRShape() {
 } // end sRShape
 
 void drawField() {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    GoToXY(1, FIELD_WIDTH + 1);
-    printf("SCORE: %d", score);
+    CHAR_INFO ch_buffer[FIELD_SIZE];
+
+    ch_buffer[0].Char.UnicodeChar = '^';
+    ch_buffer[0].Attributes = 0x0F;
+
     for (int i = 0; i < FIELD_HEIGHT; i++) {
         for (int j = 0; j < FIELD_WIDTH; j++) {
-            GoToXY(j*2 + 1, i);
+            int position = i * FIELD_WIDTH * 2 + j * 2;
             if (field[j][i]) {
-                SetConsoleTextAttribute(hConsole, 0x99);
-                printf("{}");
+                ch_buffer[position].Attributes = 0x99;
+                ch_buffer[position + 1].Attributes = 0x99;
+                // ch_buffer[position].Char.UnicodeChar = '{';
             } else {
-                SetConsoleTextAttribute(hConsole, j % 2 ? 0x70 : 0x80);
-                printf("  ");
+                char ch_var = j % 2 ? 0x70 : 0x80;
+                ch_buffer[position].Attributes = j % 2 ? 0x70 : 0x80;
+                ch_buffer[position + 1].Attributes = j % 2 ? 0x70 : 0x80;
+                ch_buffer[position].Char.UnicodeChar = ' ';
+                ch_buffer[position + 1].Char.UnicodeChar = ' ';
             } // end if
         } // end for
     } // end for
-    SetConsoleTextAttribute(hConsole, 0x22);
+
     for (int i = 0; i < SHAPE_ELEMENT_COUNT; i++) {
-        int x = shape[i].X*2 + 1;
+        int x = shape[i].X;
         int y = shape[i].Y;
-        GoToXY(x, y);
-        printf("[]");
+        int position = y * FIELD_WIDTH * 2 + x * 2;
+        ch_buffer[position].Attributes = 0x22;
+        ch_buffer[position + 1].Attributes = 0x22;
+        ch_buffer[position].Char.UnicodeChar = ' ';
+        ch_buffer[position + 1].Char.UnicodeChar = ' ';
     } // end for
-    SetConsoleTextAttribute(hConsole, 0x0f);
+
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD field_size = {.X=FIELD_WIDTH * 2, .Y=FIELD_HEIGHT};
+    COORD corner = { .X = 0, .Y = 0 };
+    SMALL_RECT rectangle = {
+        .Top = 0,
+        // .Left = FIELD_WIDTH * 2 + 10,
+        .Left = 1,
+        .Bottom = FIELD_HEIGHT - 1,
+        // .Right = FIELD_WIDTH * 4 + 9
+        .Right = FIELD_WIDTH * 2 + 1
+    };
+    WriteConsoleOutput(hConsole, 
+        ch_buffer, 
+        field_size,
+        corner, 
+        &rectangle);
+    GoToXY(1, FIELD_WIDTH + 1);
+    printf("SCORE: %d", score);
 } // end drawField
 
 int moveShapeDown() {
